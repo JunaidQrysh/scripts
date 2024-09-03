@@ -2,7 +2,7 @@
 
 function install {
  cd /
- cp -r "$dir"/Source/Linux/. /mnt/
+ cp -rn "$dir"/Source/Linux/. /mnt/
  pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils || { echo "Installation failed, Run the script again"; exit 1; }
  echo "KEYMAP=$(localectl status | grep 'VC Keymap' | awk '{print $3}')" > /mnt/etc/vconsole.conf
  mkdir -p /mnt/home/"$user"/Clone
@@ -101,7 +101,7 @@ mkdir -p {boot/efi,home,.snapshots,var/cache/pacman/pkg,var/log,etc}
 mount -o subvol=@var-log "$device" /mnt/var/log
 mount -o subvol=@var-pkg "$device" /mnt/var/cache/pacman/pkg
 mount -o subvol=@home "$device" /mnt/home
-cp "$dir"/Source/Btrfs-specific/yabsnap /mnt/etc/
+cp "$dir"/Source/Btrfs-specific/. /mnt/etc/
 btrfs_pkg=grub-btrfs
 mount "$efi" /mnt/boot/efi
 swapon "$swap"
