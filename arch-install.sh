@@ -33,7 +33,9 @@ fi
 }
 
 dir=$(pwd)
-if [ ! -f "$dir"/ran.sh ]; then
+if [ -f "$dir"/ran.sh ]; then
+source "$dir"/ran.sh
+else
 echo "Select Processor:"
 select yn in Intel Amd; do
     case "$yn" in
@@ -51,8 +53,6 @@ read -p "Enter swap device path(/dev/xxx): " swap
 read -p "Enter the user you would like to create: " user
 type=$(blkid -o value -s TYPE "$device")
 echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nuser="$user"\ntype="$type"" > "$dir"/ran.sh
-else
-	source "$dir"/ran.sh
 fi
 
 if [ "$type" != "btrfs" ]; then
@@ -69,6 +69,7 @@ if [ "$type" != "btrfs" ]; then
 		exit
 	else
 		echo "Wrong filesystem - "$type""
+		rm "$dir"/ran.sh
 		exit
 	fi
 fi
