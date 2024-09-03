@@ -1,0 +1,6 @@
+[Unit]
+Description=Pcie_ASPM
+
+[Service]
+ExecStart=/usr/bin/bash -c "echo powersupersave > /sys/module/pcie_aspm/parameters/policy"
+Type=oneshot

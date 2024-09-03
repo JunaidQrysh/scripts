@@ -95,7 +95,7 @@ mount -o subvol=@var-log "$device" /mnt/var/log
 mount -o subvol=@var-pkg "$device" /mnt/var/cache/pacman/pkg
 mount -o subvol=@home "$device" /mnt/home
 cp "$dir"/Source/Btrfs-specific/yabsnap /mnt/etc/
-btrfs_pkg=grub_btrfs
+btrfs_pkg=grub-btrfs
 mount "$efi" /mnt/boot/efi
 swapon "$swap"
 genfstab -U /mnt >> /mnt/etc/fstab
