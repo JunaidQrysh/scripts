@@ -2,18 +2,24 @@
 
 function install {
  cd /
- pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils || { echo "Installation failed, Run the script again"; exit 1; }
  cp -r "$dir"/Source/Linux/. /mnt/
+ pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils || { echo "Installation failed, Run the script again"; exit 1; }
  echo "KEYMAP=$(localectl status | grep 'VC Keymap' | awk '{print $3}')" > /mnt/etc/vconsole.conf
  mkdir -p /mnt/home/"$user"/Clone
  git clone "$dir" /mnt/home/"$user"/Clone
  arch-chroot /mnt bash -c '
  grub-install --efi-directory=/boot/efi --bootloader-id=Arch
  echo "Enter root account password:"
- passwd
+ while [ true ]
+ do
+ passwd && break
+ done
  useradd -m -G wheel,video "$user"
  echo "Enter user account password:"
- passwd "$user"
+ while [ true ]
+ do
+ passwd "$user" && break
+ done
  systemctl enable NetworkManager
  systemctl enable systemd-resolved
  systemctl enable greetd
@@ -51,8 +57,9 @@ read -p "Enter install device path(/dev/xxx): " device
 read -p "Enter efi device path(/dev/xxx): " efi
 read -p "Enter swap device path(/dev/xxx): " swap
 read -p "Enter the user you would like to create: " user
+export user="$user"
 type=$(blkid -o value -s TYPE "$device")
-echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nuser="$user"\ntype="$type"" > "$dir"/ran.sh
+echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"" > "$dir"/ran.sh
 fi
 
 if [ "$type" != "btrfs" ]; then
@@ -64,7 +71,7 @@ if [ "$type" != "btrfs" ]; then
 		btrfs_pkg=''
 		mount "$efi" /mnt/boot/efi
  		swapon "$swap"
-                genfstab -U /mnt >> /mnt/etc/fstab
+                genfstab -U /mnt > /mnt/etc/fstab
 		install
 		exit
 	else
@@ -98,6 +105,6 @@ cp "$dir"/Source/Btrfs-specific/yabsnap /mnt/etc/
 btrfs_pkg=grub-btrfs
 mount "$efi" /mnt/boot/efi
 swapon "$swap"
-genfstab -U /mnt >> /mnt/etc/fstab
+genfstab -U /mnt > /mnt/etc/fstab
 sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
 install
