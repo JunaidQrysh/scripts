@@ -1,7 +1,55 @@
 #!/usr/bin/bash
 
 export dir=$(pwd)
-source "$dir"/functions.sh 
+
+error_message() {
+    echo "$1" >&2
+}
+
+info_message() {
+    echo "$1"
+}
+
+list_timezones() {
+    echo "Here is the list of available timezones:"
+    echo "Use the arrow keys to scroll, and press 'q' to quit the pager."
+    find /usr/share/zoneinfo -type f | sed 's|/usr/share/zoneinfo/||' | sort | less
+}
+
+select_timezone() {
+    local timezones
+    local choice
+
+    timezones=$(mktemp)
+    find /usr/share/zoneinfo -type f | sed 's|/usr/share/zoneinfo/||' | sort > "$timezones"
+
+    echo "You will now see a list of available timezones."
+    echo "Use the arrow keys to scroll through the list, and press 'q' to exit the pager."
+    echo "Please make a note of the timezone you want to select."
+    echo
+    read -p "Press Enter to continue and view the list of timezones..."
+
+    list_timezones
+
+    echo
+    while true; do
+        read -p "Enter the timezone from the list (e.g., Europe/Paris): " TIMEZONE
+
+        if grep -q "^$TIMEZONE$" "$timezones"; then
+            info_message "Selected timezone: $TIMEZONE"
+            break
+        else
+            error_message "Error: Invalid selection. Please enter a valid timezone from the list."
+        fi
+    done
+
+    rm "$timezones"
+}
+
+export -f error_message
+export -f info_message
+export -f list_timezones
+export -f select_timezone
 
 function install {
  echo "$host" > /mnt/etc/hostname
@@ -9,9 +57,9 @@ function install {
  cp -rn "$dir"/Source/Linux/. /mnt/
  pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils || { echo "Installation failed, Run the script again"; exit 1; }
  echo "KEYMAP=$(localectl status | grep 'VC Keymap' | awk '{print $3}')" > /mnt/etc/vconsole.conf
+ git clone "$dir" /mnt/scripts
  
  arch-chroot /mnt bash -c '
- source "$dir"/functions.sh
  grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
  grubu
  echo "Enter root account password:"
@@ -34,8 +82,9 @@ if [ -d "/sys/class/power_supply" ]; then
 else
 	pacman -Runs thermald
 fi
- mkdir -p /mnt/home/"$user"/Clone
- git clone "$dir" /mnt/home/"$user"/Clone
+ mkdir -p /home/"$user"/Clone
+ git clone /scripts /home/"$user"/Clone/scripts
+ chown -R "$user":"$user" /home/"$user"/Clone/scripts/*	
 select_timezone
 
 echo "Setting timezone to $TIMEZONE..."
