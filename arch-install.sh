@@ -98,8 +98,6 @@ if [ -f "$dir"/ran.sh ]; then
 source "$dir"/ran.sh
 else
 
-
-
 list_disks() {
     echo
     echo "Available disks:"
@@ -126,6 +124,17 @@ select_disk() {
         
         if [[ "$choice" -ge 1 && "$choice" -le ${#disks[@]} ]]; then
 		DISK=$(echo ${disks[$((choice - 1))]} | awk '{print $1}')
+		umount -R /mnt
+if [[ "$DISK" =~ ^/dev/nvme ]]; then
+    efi="${DISK}p1"
+    swap="${DISK}p2"
+    device="${DISK}p3"
+else
+    efi="${DISK}1"
+    swap="${DISK}2"
+    device="${DISK}3"
+fi
+		swapoff $swap
             info_message "Selected disk: $DISK"
             break
         else
@@ -198,21 +207,13 @@ SWAP_SIZE_SECTORS=$(echo "$SWAP_SIZE" | awk '/G/ {print $1 * 2048000} /M/ {print
 
 info_message "Partitioning completed successfully."
 
-sleep 2
-
-if [[ "$DISK" =~ ^/dev/nvme ]]; then
-    efi="${DISK}p1"
-    swap="${DISK}p2"
-    device="${DISK}p3"
-else
-    efi="${DISK}1"
-    swap="${DISK}2"
-    device="${DISK}3"
-fi
+sleep 5
 
 mkfs.fat -F32 "$efi"
 mkfs.btrfs -f "$device"
 mkswap -f "$swap"
+
+mount "$device" /mnt
 
 echo "Select Processor:"
 select yn in Intel Amd; do
@@ -229,20 +230,19 @@ read -p "Enter the user you would like to create: " user
 export user="$user"
 read -p "Enter the hostname: " host
 type=$(blkid -o value -s TYPE "$device")
-echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"\nhost=$host" > "$dir"/ran.sh
 fi
 
 if [ "$type" != "btrfs" ]; then
 
 	if [ "$type" = "ext4" ]; then
-		if [ -f "$dir"/ran.sh ]; then
-		mount "$device" /mnt
+		if [ ! -f "$dir"/ran.sh ]; then
 		cd /mnt
 		mkdir -p {boot/efi,etc}
 		mount "$efi" /mnt/boot/efi
  		swapon "$swap"
                 genfstab -U /mnt > /mnt/etc/fstab
 		fi
+		echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"\nhost=$host" > "$dir"/ran.sh
 		btrfs_pkg=''
 		install
 		exit
@@ -253,8 +253,7 @@ if [ "$type" != "btrfs" ]; then
 	fi
 fi
 
-if [ -f "$dir"/ran.sh ]; then
-mount "$device" /mnt
+if [ ! -f "$dir"/ran.sh ]; then
 cd /mnt
 btrfs subvolume create @
 btrfs subvolume create @var-log
@@ -277,7 +276,8 @@ mount "$efi" /mnt/boot/efi
 swapon "$swap"
 genfstab -U /mnt > /mnt/etc/fstab
 sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
-fi
 cp -r "$dir"/Source/Btrfs-specific/. /mnt/etc/
+fi
+echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"\nhost=$host" > "$dir"/ran.sh
 btrfs_pkg=grub-btrfs
 install
