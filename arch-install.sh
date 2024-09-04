@@ -55,8 +55,7 @@ function install {
  echo "$host" > /mnt/etc/hostname
  cd /
  cp -rn "$dir"/Source/Linux/. /mnt/
- pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils || { echo "Installation failed, Run the script again"; exit 1; }
- echo "KEYMAP=$(localectl status | grep 'VC Keymap' | awk '{print $3}')" > /mnt/etc/vconsole.conf
+ pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils less || { echo "Installation failed, Run the script again"; exit 1; }
  git clone "$dir" /mnt/scripts
  
  arch-chroot /mnt bash -c '
@@ -84,7 +83,9 @@ else
 fi
  mkdir -p /home/"$user"/Clone
  git clone /scripts /home/"$user"/Clone/scripts
- chown -R "$user":"$user" /home/"$user"/Clone/scripts/*	
+ chown -R "$user":"$user" /home/"$user"/Clone/
+ chown -R "$user":"$user" /home/"$user"/Clone/*
+ rm /scripts
 select_timezone
 
 echo "Setting timezone to $TIMEZONE..."
