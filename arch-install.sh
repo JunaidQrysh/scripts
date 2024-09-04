@@ -54,7 +54,10 @@ export -f select_timezone
 function install {
  echo "$host" > /mnt/etc/hostname
  cd /
- cp -rn "$dir"/Source/Linux/. /mnt/
+ cp -rn "$dir"/Source/Arch/Arch-Root/. /mnt/
+ if [ -d "/sys/class/power_supply" ]; then
+	 cp -r "$dir"/Source/Arch/Laptop-specific/. /mnt/
+ fi
  pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils less || { echo "Installation failed, Run the script again"; exit 1; }
  git clone "$dir" /mnt/scripts
  
@@ -285,7 +288,7 @@ mount "$efi" /mnt/boot/efi
 swapon "$swap"
 genfstab -U /mnt > /mnt/etc/fstab
 sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
-cp -r "$dir"/Source/Btrfs-specific/. /mnt/etc/
+cp -r "$dir"/Source/Arch/Btrfs-specific/. /mnt/
 fi
 echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"\nhost=$host" > "$dir"/ran.sh
 btrfs_pkg=grub-btrfs
