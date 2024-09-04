@@ -89,6 +89,11 @@ fi
  chown -R "$user":"$user" /home/"$user"/Clone/
  chown -R "$user":"$user" /home/"$user"/Clone/*
  rm /scripts
+ mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
+ chown "$user":"$user" /home/"$user"/.cache
+ chown "$user":"$user" /home/"$user"/.config
+ chown "$user":"$user" /home/"$user"/.dotfiles
+ chown "$user":"$user" /home/"$user"/Download
 select_timezone
 
 echo "Setting timezone to $TIMEZONE..."
@@ -104,6 +109,14 @@ locale-gen
  echo -e "Insalltion successful\nYou may Reboot now"
  cd /
 '
+if [ "$type" = "btrfs" ]; then
+mount -o subvol=@home-cache "$device" /mnt/home/"$user"/.cache
+mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
+mount -o subvol=@home-dots"$device" /mnt/home/"$user"/.dotfiles
+mount -o subvol=@home-down "$device" /mnt/home/"$user"/Download
+genfstab -U /mnt >> /mnt/etc/fstab
+sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
+fi
 }
 
 if [ -f "$dir"/ran.sh ]; then
@@ -252,7 +265,7 @@ if [ "$type" != "btrfs" ]; then
 		mkdir -p {boot/efi,etc}
 		mount "$efi" /mnt/boot/efi
  		swapon "$swap"
-                genfstab -U /mnt > /mnt/etc/fstab
+		genfstab -U /mnt >> /mnt/etc/fstab
 		fi
 		echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"\nhost=$host" > "$dir"/ran.sh
 		btrfs_pkg=''
@@ -286,8 +299,6 @@ mount -o subvol=@var-pkg "$device" /mnt/var/cache/pacman/pkg
 mount -o subvol=@home "$device" /mnt/home
 mount "$efi" /mnt/boot/efi
 swapon "$swap"
-genfstab -U /mnt > /mnt/etc/fstab
-sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
 cp -r "$dir"/Source/Arch/Btrfs-specific/. /mnt/
 fi
 echo -e "#!/usr/bin/bash\nprocessor="$processor"\ndevice="$device"\nefi="$efi"\nswap="$swap"\nexport user="$user"\ntype="$type"\nhost=$host" > "$dir"/ran.sh
