@@ -54,19 +54,14 @@ export -f select_timezone
 install() {
     echo "$host" > /mnt/etc/hostname
     cd /
-    cp -rn "$dir"/Source/Arch/Arch-Root/. /mnt/
-
-    if [ -d "/sys/class/power_supply" ]; then
-        cp -r "$dir"/Source/Arch/Laptop-specific/. /mnt/
-    fi
 
     pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager greetd thermald fish alsa-utils less || {
         echo "Installation failed, Run the script again"
         exit 1
     }
 
-    git clone "$dir" /mnt/scripts
-
+    sed -i '/^#en_US.UTF-8/s/^#//' /mnt/etc/locale.gen
+    echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
     arch-chroot /mnt bash -c '
         grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
         grub-mkconfig -o /boot/grub/grub.cfg
@@ -82,16 +77,14 @@ install() {
         systemctl enable NetworkManager
         systemctl enable systemd-resolved
         systemctl enable greetd
+	echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg" > /usr/bin/update-grub
         if [ -d "/sys/class/power_supply" ]; then
+	    echo -e "SUBSYSTEM==\"pci\", ATTR{power/control}=\"auto\"" > /etc/udev/rules.d/pci_pm.rules
+	    echo -e "options snd_hda_intel power_save=1" > /etc/modprobe.d/audio_powersave.conf
             systemctl enable thermald
-            systemctl enable pcie_aspm.timer
         else
-            pacman -Rns thermald
+            pacman -Runs thermald
         fi
-        mkdir -p /home/"$user"/Clone
-        git clone /scripts /home/"$user"/Clone/scripts
-        chown -R "$user":"$user" /home/"$user"/Clone/
-        chown -R "$user":"$user" /home/"$user"/Clone/*
         rm /scripts
         mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
         chown "$user":"$user" /home/"$user"/.cache
@@ -110,9 +103,9 @@ install() {
         sed -i "s/\"\"/\"$user\"/" /etc/greetd/config.toml
         chsh -s /usr/bin/fish
         chsh -s /usr/bin/fish "$user"
-        echo -e "Installation successful\nYou may reboot now"
-        cd /
+	exit
     '
+    sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
 
     if [ "$type" = "btrfs" ]; then
         mount -o subvol=@home-cache "$device" /mnt/home/"$user"/.cache
@@ -121,7 +114,15 @@ install() {
         mount -o subvol=@home-down "$device" /mnt/home/"$user"/Download
         genfstab -U /mnt >> /mnt/etc/fstab
         sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
+	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
     fi
+    	arch-chroot /mnt bash -c '
+	mkinitcpio -P
+	exit
+	'
+	umount -R /mnt
+	swapoff $swap
+	echo -e "Installation successful\nYou may reboot now"
 }
 
 if [ -f "$dir"/ran.sh ]; then
@@ -306,7 +307,6 @@ if [ ! -f "$dir"/ran.sh ]; then
     mount -o subvol=@home "$device" /mnt/home
     mount "$efi" /mnt/boot/efi
     swapon "$swap"
-    cp -r "$dir"/Source/Arch/Btrfs-specific/. /mnt/
 fi
 
 echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nexport user=$user\ntype=$type\nhost=$host" > "$dir"/ran.sh
