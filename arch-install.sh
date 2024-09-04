@@ -125,7 +125,7 @@ select_disk() {
         read -p "Select a disk by number (1-${#disks[@]}): " choice
         
         if [[ "$choice" -ge 1 && "$choice" -le ${#disks[@]} ]]; then
-            DISK=${disks[$((choice - 1))]}
+		DISK=$(echo ${disks[$((choice - 1))]} | awk '{print $1}')
             info_message "Selected disk: $DISK"
             break
         else
@@ -171,12 +171,9 @@ EFI_SIZE_SECTORS=$((100 * 1024 * 2))  # 100 MB in sectors (assuming 512 bytes pe
 
 SWAP_SIZE_SECTORS=$(echo "$SWAP_SIZE" | awk '/G/ {print $1 * 2048000} /M/ {print $1 * 409600} /K/ {print $1 * 409.6} /[0-9]/ {print $1 * 2048000}')
 
-LINUX_SIZE_SECTORS=$((REMAINING_SIZE_SECTORS - SWAP_SIZE_SECTORS))
-
 {
-    echo
-    echo "Creating partitions on $DISK..."
     echo "o"         
+    echo "y"
     echo "n"        
     echo "1"         
     echo ""          
@@ -196,6 +193,7 @@ LINUX_SIZE_SECTORS=$((REMAINING_SIZE_SECTORS - SWAP_SIZE_SECTORS))
     echo "8300"      
     
     echo "w"        
+    echo "y"
 } | gdisk "$DISK" || error_message "Failed to partition the disk."
 
 info_message "Partitioning completed successfully."
@@ -212,7 +210,7 @@ else
     device="${DISK}3"
 fi
 
-mkfs.fat -f -F32 "$efi"
+mkfs.fat -F32 "$efi"
 mkfs.btrfs -f "$device"
 mkswap -f "$swap"
 
@@ -237,13 +235,15 @@ fi
 if [ "$type" != "btrfs" ]; then
 
 	if [ "$type" = "ext4" ]; then
+		if [ -f "$dir"/ran.sh ]; then
 		mount "$device" /mnt
 		cd /mnt
 		mkdir -p {boot/efi,etc}
-		btrfs_pkg=''
 		mount "$efi" /mnt/boot/efi
  		swapon "$swap"
                 genfstab -U /mnt > /mnt/etc/fstab
+		fi
+		btrfs_pkg=''
 		install
 		exit
 	else
@@ -253,6 +253,7 @@ if [ "$type" != "btrfs" ]; then
 	fi
 fi
 
+if [ -f "$dir"/ran.sh ]; then
 mount "$device" /mnt
 cd /mnt
 btrfs subvolume create @
@@ -266,17 +267,17 @@ btrfs subvolume create @home-down
 btrfs subvolume create @.snapshots
 cd /
 umount /mnt
-
 mount -o subvol=@ "$device" /mnt
 cd /mnt
 mkdir -p {boot/efi,home,.snapshots,var/cache/pacman/pkg,var/log,etc}
 mount -o subvol=@var-log "$device" /mnt/var/log
 mount -o subvol=@var-pkg "$device" /mnt/var/cache/pacman/pkg
 mount -o subvol=@home "$device" /mnt/home
-cp "$dir"/Source/Btrfs-specific/. /mnt/etc/
-btrfs_pkg=grub-btrfs
 mount "$efi" /mnt/boot/efi
 swapon "$swap"
 genfstab -U /mnt > /mnt/etc/fstab
 sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
+fi
+cp -r "$dir"/Source/Btrfs-specific/. /mnt/etc/
+btrfs_pkg=grub-btrfs
 install
