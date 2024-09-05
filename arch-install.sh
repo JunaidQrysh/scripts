@@ -53,7 +53,7 @@ export -f select_timezone
 install() {
     echo "$host" > /mnt/etc/hostname
     cd /
-
+    sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
     pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager thermald alsa-utils less || {
         echo "Installation failed, Run the script again"
         exit 1
@@ -90,8 +90,6 @@ install() {
         info_message "Timezone set to $TIMEZONE."
 
         locale-gen
-
-	exit
     '
     sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
 
@@ -106,11 +104,18 @@ install() {
     fi
     	arch-chroot /mnt bash -c '
 	mkinitcpio -P
-	exit
 	'
-	umount -R /mnt
-	swapoff $swap
-	echo -e "Installation successful\nYou may reboot now"
+	echo -e "Installation successful. Unmount and Reboot Now?"
+	select ynr in Yes No; do
+		case $ynr in 
+			Yes)	umount -R /mnt
+				swapoff $swap
+				reboot
+				;;
+			No)	break
+				;;
+		esac
+	done
 }
 
 if [ -f "$dir"/ran.sh ]; then
@@ -315,7 +320,6 @@ if [ "$devicefs" != "btrfs" ]; then
         fi
         btrfs_pkg=''
         install
-        exit
 fi
 
 if [ ! -f "$dir"/ran.sh ]; then
