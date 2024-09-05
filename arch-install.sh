@@ -54,7 +54,7 @@ install() {
     echo "$host" > /mnt/etc/hostname
     cd /
     sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
-    pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager thermald alsa-utils less || {
+    pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
         echo "Installation failed, Run the script again"
         exit 1
     }
@@ -207,7 +207,7 @@ else
 select yn in Intel Amd Other; do
     case "$yn" in
         Intel)
-            processor="intel-ucode"
+            processor="intel-ucode intel-media-driver"
             break
             ;;
         Amd)
