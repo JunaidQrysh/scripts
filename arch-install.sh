@@ -95,7 +95,7 @@ install() {
     '
     sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
 
-    if [ "$type" = "btrfs" ]; then
+    if [ "$devicefs" = "btrfs" ]; then
         mount -o subvol=@home-cache "$device" /mnt/home/"$user"/.cache
         mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
         mount -o subvol=@home-dots "$device" /mnt/home/"$user"/.dotfiles
@@ -304,7 +304,7 @@ export user
 export root_pass
 export user_pass
 
-if [ "$type" != "btrfs" ]; then
+if [ "$devicefs" != "btrfs" ]; then
         if [ ! -f "$dir"/ran.sh ]; then
             cd /mnt
             mkdir -p {boot/efi,etc}
@@ -312,7 +312,7 @@ if [ "$type" != "btrfs" ]; then
             swapon "$swap"
             genfstab -U /mnt >> /mnt/etc/fstab
     	else
-	echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ntype=$type\nhost=$host" > "$dir"/ran.sh
+	echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
         fi
         btrfs_pkg=''
         install
@@ -341,7 +341,7 @@ if [ ! -f "$dir"/ran.sh ]; then
     mount "$efi" /mnt/boot/efi
     swapon "$swap"
 else
-	echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ntype=$type\nhost=$host" > "$dir"/ran.sh
+	echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
 fi
 btrfs_pkg=grub-btrfs
 install
