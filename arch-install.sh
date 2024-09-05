@@ -311,8 +311,7 @@ if [ "$devicefs" != "btrfs" ]; then
             mount "$efi" /mnt/boot/efi
             swapon "$swap"
             genfstab -U /mnt >> /mnt/etc/fstab
-    	else
-	echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
+	    echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
         fi
         btrfs_pkg=''
         install
@@ -340,8 +339,7 @@ if [ ! -f "$dir"/ran.sh ]; then
     mount -o subvol=@home "$device" /mnt/home
     mount "$efi" /mnt/boot/efi
     swapon "$swap"
-else
-	echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
+    echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
 fi
 btrfs_pkg=grub-btrfs
 install
