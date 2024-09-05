@@ -21,17 +21,15 @@ create_user_and_group() {
     if ! getent group $primary_gid >/dev/null; then
         groupadd -g $primary_gid $username
         echo "Created primary group $username with GID $primary_gid"
-    else
-        echo "Primary group with GID $primary_gid already exists, using existing group"
     fi
 
     # Create the additional group if specified and it doesn't exist
     if [ -n "$additional_group" ]; then
         if ! getent group $additional_gid >/dev/null; then
             groupadd -g $additional_gid $additional_group
-            echo "Created additional group $additional_group with GID $additional_gid"
+            echo "Created group $additional_group with GID $additional_gid"
         else
-            echo "Additional group with GID $additional_gid already exists, using existing group"
+            echo "Group with GID $additional_gid already exists, using existing group"
         fi
     fi
 
@@ -39,8 +37,6 @@ create_user_and_group() {
     if ! getent passwd $uid >/dev/null; then
         useradd -u $uid -g $primary_gid -d "/home/$username" -M -s /bin/bash $username
         echo "Created user $username with UID $uid in group with GID $primary_gid"
-    else
-        echo "User with UID $uid already exists"
     fi
 }
 
@@ -66,13 +62,22 @@ for dir in /home/*/; do
         else
             echo "Conflict detected for $dirname. Multiple directories with UID $uid or GID $gid"
             read -p "Enter username: " username
-            read -p "Enter additional group name: " additional_group
+            read -p "Enter group name: " additional_group
             create_user_and_group $username $uid $uid $additional_group $gid
         fi
     else
         echo "UID ($uid) and GID ($gid) mismatch for $dirname"
-        read -p "Enter username: " username
-        read -p "Enter additional group name: " additional_group
+        
+        # Check if the user already exists before prompting for username
+        if ! getent passwd $uid >/dev/null; then
+            read -p "Enter username: " username
+        else
+            echo "User with UID $uid already exists, skipping username prompt"
+            username=$(getent passwd $uid | cut -d: -f1)
+        fi
+
+        # Prompt for additional group name
+        read -p "Enter group name: " additional_group
         
         # Create the primary group with the same name and UID as GID
         create_user_and_group $username $uid $uid $additional_group $gid
