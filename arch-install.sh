@@ -226,7 +226,19 @@ echo -e "root_pass=$pass1" >> "$dir"/pass.sh
 
 read -p "Enter the hostname: " host
 echo
-type=$(blkid -o value -s TYPE "$device")
+echo "Select Filesystem Type: "
+select devicefs in "Btrfs(recommended)" "Ext4"; do
+    case "$devicefs" in
+"Btrfs(recommended)")
+            devicefs="btrfs"
+            break
+            ;;
+         "Ext4")
+            devicefs="ext4"
+            break
+            ;;
+    esac
+done
 
 select_timezone
 select_disk
@@ -293,7 +305,6 @@ export root_pass
 export user_pass
 
 if [ "$type" != "btrfs" ]; then
-    if [ "$type" = "ext4" ]; then
         if [ ! -f "$dir"/ran.sh ]; then
             cd /mnt
             mkdir -p {boot/efi,etc}
@@ -306,11 +317,6 @@ if [ "$type" != "btrfs" ]; then
         btrfs_pkg=''
         install
         exit
-    else
-        echo "Wrong filesystem - $type"
-        rm "$dir"/ran.sh
-        exit
-    fi
 fi
 
 if [ ! -f "$dir"/ran.sh ]; then
