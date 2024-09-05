@@ -11,8 +11,6 @@ info_message() {
 }
 
 list_timezones() {
-    echo "Here is the list of available timezones:"
-    echo "Use the arrow keys to scroll, and press 'q' to quit the pager."
     find /usr/share/zoneinfo -type f | sed 's|/usr/share/zoneinfo/||' | sort | less
 }
 
@@ -160,7 +158,7 @@ done
 
             if [[ "$choice" -ge 1 && "$choice" -le ${#disks[@]} ]]; then
                 DISK=$(echo ${disks[$((choice - 1))]} | awk '{print $1}')
-                umount -R /mnt
+                umount -R /mnt > /dev/null 2>&1
 
                 if [[ "$DISK" =~ ^/dev/nvme ]]; then
                     efi="${DISK}p1"
@@ -172,7 +170,7 @@ done
                     device="${DISK}3"
                 fi
 
-                swapoff "$swap"
+                swapoff "$swap" > /dev/null 2>&1
                 info_message "Selected disk: $DISK"
                 break
             else
@@ -218,12 +216,16 @@ done
 fi
 
 read -p "Enter the user you would like to create: " user
+echo
 pass_set $user
+echo
 echo -e "#!/usr/bin/bash\nuser_pass=$pass1" > "$dir"/pass.sh
 pass_set root
-echo -e "#!/usr/bin/bash\nroot_pass=$pass1" >> "$dir"/pass.sh
+echo
+echo -e "root_pass=$pass1" >> "$dir"/pass.sh
 
 read -p "Enter the hostname: " host
+echo
 type=$(blkid -o value -s TYPE "$device")
 
 select_timezone
