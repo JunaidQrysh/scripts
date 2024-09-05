@@ -1,8 +1,0 @@
-[Unit]
-Description="Pcie_ASPM"
-
-[Timer]
-OnStartupSec=30
-
-[Install]
-WantedBy=multi-user.target

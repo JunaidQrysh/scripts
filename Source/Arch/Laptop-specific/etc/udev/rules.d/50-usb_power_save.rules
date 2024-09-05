@@ -1,2 +1,0 @@
-# whitelist for usb autosuspend
-ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{idVendor}=="2808", ATTR{idProduct}=="a658", ATTR{power/control}="auto"
