@@ -185,7 +185,7 @@ else
 select yn in Intel Amd Other; do
     case "$yn" in
         Intel)
-            processor="intel-ucode intel-media-driver"
+            processor="intel-ucode"
             break
             ;;
         Amd)
@@ -214,7 +214,7 @@ select devicefs in "Btrfs(recommended)" "Ext4"; do
 done
 
 select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
-	case instype in 
+	case "$instype" in 
 		"Install from Scratch") get_swap_size
 			scratch="yes"
 			break
