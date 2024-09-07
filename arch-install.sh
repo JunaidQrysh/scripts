@@ -155,13 +155,14 @@ fi
 
 user_set() {
 	mount "$device" /mnt
-	if [ "$devicefs" = btrfs ]; then
+	if [ ! "$scratch" = "yes" ]; then
 		if btrfs subvolume list /mnt | grep -q "@home"; then
 		user_main
 		fi
 	else
 		read -p "Enter the user you would like to create: " user
 		echo
+                uid=''
 	fi
 	umount /mnt
 }
@@ -322,7 +323,6 @@ cd /
     mount -o subvol=@home "$device" /mnt/home
     mount "$efi" /mnt/boot/efi
     swapon "$swap"
-    echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
 fi
 btrfs_pkg=grub-btrfs
 fi
@@ -334,15 +334,15 @@ if [ "$devicefs" = "ext4" ]; then
             mount "$efi" /mnt/boot/efi
             swapon "$swap"
             genfstab -U /mnt >> /mnt/etc/fstab
-	    echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
         fi
         btrfs_pkg=''
 fi
+echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\ndevicefs=$devicefs\nuser=$user\nuid=$uid\nTIMEZONE=$TIMEZONE\nhost=$host" > "$dir"/ran.sh
 
     echo "$host" > /mnt/etc/hostname
     cd /
     sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
-    pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
+    pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
         echo "Installation failed, Run the script again"
         exit 1
     }
@@ -354,7 +354,7 @@ fi
 	echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg" > /usr/bin/grubu
 	chmod +x /usr/bin/grubu
 	grubu
-        useradd -m -G wheel,video "$uid" "$user"
+        useradd -m -G wheel,video $uid "$user"
 	echo "root:"$root_pass"" | chpasswd
 	echo ""$user":"$user_pass"" | chpasswd
         systemctl enable NetworkManager
@@ -368,6 +368,7 @@ fi
         fi
         rm /scripts
         mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
+	chown "$user":"$user" /home/"$user"
         chown "$user":"$user" /home/"$user"/.cache
         chown "$user":"$user" /home/"$user"/.config
         chown "$user":"$user" /home/"$user"/.dotfiles
