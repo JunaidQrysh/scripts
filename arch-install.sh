@@ -350,6 +350,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     sed -i '/^#en_US.UTF-8/s/^#//' /mnt/etc/locale.gen
     echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
     arch-chroot /mnt bash -c '
+        sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
         grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
 	echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg" > /usr/bin/grubu
 	chmod +x /usr/bin/grubu
@@ -366,7 +367,6 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
         else
             pacman -Runs thermald
         fi
-        rm /scripts
         mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
 	chown "$user":"$user" /home/"$user"
         chown "$user":"$user" /home/"$user"/.cache
