@@ -155,8 +155,8 @@ fi
 
 user_set() {
 	mount "$device" /mnt
-	if [ ! "$scratch" = "yes" ]; then
-		if btrfs subvolume list /mnt | grep -q "@home"; then
+	if [ ! "$devicefs" = "btrfs" ]; then
+		if [ ! $scratch = "yes" ]; then
 		user_main
 		fi
 	else
@@ -333,7 +333,7 @@ if [ "$devicefs" = "ext4" ]; then
             mkdir -p {boot/efi,etc}
             mount "$efi" /mnt/boot/efi
             swapon "$swap"
-            genfstab -U /mnt >> /mnt/etc/fstab
+            genfstab -U /mnt > /mnt/etc/fstab
         fi
         btrfs_pkg=''
 fi
@@ -388,7 +388,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
         mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
         mount -o subvol=@home-dots "$device" /mnt/home/"$user"/.dotfiles
         mount -o subvol=@home-down "$device" /mnt/home/"$user"/Download
-        genfstab -U /mnt >> /mnt/etc/fstab
+        genfstab -U /mnt > /mnt/etc/fstab
         sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
 	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
     fi
