@@ -387,7 +387,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
         chown "$user":"$user" /home/"$user"/.cache
         chown "$user":"$user" /home/"$user"/.config
         chown "$user":"$user" /home/"$user"/.dotfiles
-        chown "$user":"$user" /home/"$user"/Download
+        chown "$user":"$user" /home/"$user"/Downloads
         genfstab -U /mnt > /mnt/etc/fstab
         sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
 	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
