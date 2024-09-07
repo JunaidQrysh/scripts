@@ -367,12 +367,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
         else
             pacman -Runs thermald
         fi
-        mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
-	chown "$user":"$user" /home/"$user"
-        chown "$user":"$user" /home/"$user"/.cache
-        chown "$user":"$user" /home/"$user"/.config
-        chown "$user":"$user" /home/"$user"/.dotfiles
-        chown "$user":"$user" /home/"$user"/Download
+	
 
         echo "Setting timezone to $TIMEZONE..."
         ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
@@ -388,6 +383,11 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
         mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
         mount -o subvol=@home-dots "$device" /mnt/home/"$user"/.dotfiles
         mount -o subvol=@home-down "$device" /mnt/home/"$user"/Download
+	chown "$user":"$user" /home/"$user"
+        chown "$user":"$user" /home/"$user"/.cache
+        chown "$user":"$user" /home/"$user"/.config
+        chown "$user":"$user" /home/"$user"/.dotfiles
+        chown "$user":"$user" /home/"$user"/Download
         genfstab -U /mnt > /mnt/etc/fstab
         sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
 	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
