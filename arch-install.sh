@@ -45,83 +45,6 @@ select_timezone() {
     rm "$timezones"
 }
 
-export -f error_message
-export -f info_message
-export -f list_timezones
-export -f select_timezone
-
-install() {
-    echo "$host" > /mnt/etc/hostname
-    cd /
-    sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
-    pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
-        echo "Installation failed, Run the script again"
-        exit 1
-    }
-
-    sed -i '/^#en_US.UTF-8/s/^#//' /mnt/etc/locale.gen
-    echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
-    arch-chroot /mnt bash -c '
-        grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
-        grub-mkconfig -o /boot/grub/grub.cfg
-        useradd -m -G wheel,video "$user"
-	echo "root:"$root_pass"" | chpasswd
-	echo ""$user":"$user_pass"" | chpasswd
-        systemctl enable NetworkManager
-        systemctl enable systemd-resolved
-	echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg" > /usr/bin/update-grub
-        if [ -d "/sys/class/power_supply" ]; then
-	    echo -e "SUBSYSTEM==\"pci\", ATTR{power/control}=\"auto\"" > /etc/udev/rules.d/pci_pm.rules
-	    echo -e "options snd_hda_intel power_save=1" > /etc/modprobe.d/audio_powersave.conf
-            systemctl enable thermald
-        else
-            pacman -Runs thermald
-        fi
-        rm /scripts
-        mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
-        chown "$user":"$user" /home/"$user"/.cache
-        chown "$user":"$user" /home/"$user"/.config
-        chown "$user":"$user" /home/"$user"/.dotfiles
-        chown "$user":"$user" /home/"$user"/Download
-
-        echo "Setting timezone to $TIMEZONE..."
-        ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-
-        info_message "Timezone set to $TIMEZONE."
-
-        locale-gen
-    '
-    sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
-
-    if [ "$devicefs" = "btrfs" ]; then
-        mount -o subvol=@home-cache "$device" /mnt/home/"$user"/.cache
-        mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
-        mount -o subvol=@home-dots "$device" /mnt/home/"$user"/.dotfiles
-        mount -o subvol=@home-down "$device" /mnt/home/"$user"/Download
-        genfstab -U /mnt >> /mnt/etc/fstab
-        sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
-	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
-    fi
-    	arch-chroot /mnt bash -c '
-	mkinitcpio -P
-	'
-	echo -e "Installation successful. Unmount and Reboot Now?"
-	select ynr in Yes No; do
-		case $ynr in 
-			Yes)	umount -R /mnt
-				swapoff $swap
-				reboot
-				;;
-			No)	break
-				;;
-		esac
-	done
-}
-
-if [ -f "$dir"/ran.sh ]; then
-    source "$dir"/ran.sh
-else	
-
 pass_set () {
 while true; do
     read -sp "Enter new password for $1: " pass1
@@ -198,6 +121,60 @@ done
         done
     }
 
+user_main() {
+folders=()
+for folder in /mnt/@home/*; do
+    if [ -d "$folder" ]; then
+        folders+=("$(basename "$folder")")
+    fi
+done
+
+if [ "${#folders[@]}" -gt 1 ]; then
+    echo "Multiple folders found in /mnt/@home/home/. Please select the main folder:"
+    
+    select user in "${folders[@]}"; do
+        if [[ -n "$user" ]]; then
+            echo "Main folder selected: $user"
+	    uid="-u $(stat -c '%u' "/mnt/@home/home/"$user"")"
+            break
+        else
+            echo "Invalid selection. Please try again."
+        fi
+    done
+
+elif [ "${#folders[@]}" -eq 1 ]; then
+    user="${folders[0]}"
+    echo "Only one folder found. Setting '$user' as the main folder."
+    uid="-u $(stat -c '%u' "/mnt/@home/home/"$user"")"
+else
+    read -p "Enter the user you would like to create: " user
+    echo
+    uid=''
+fi
+}
+
+user_set() {
+	mount "$device" /mnt
+	if [ "$devicefs" = btrfs ]; then
+		if btrfs subvolume list /mnt | grep -q "@home"; then
+		user_main
+		fi
+	else
+		read -p "Enter the user you would like to create: " user
+		echo
+	fi
+	umount /mnt
+}
+
+export -f error_message
+export -f info_message
+export -f list_timezones
+export -f select_timezone
+
+if [ -f "$dir"/ran.sh ]; then
+    source "$dir"/ran.sh
+else	
+
 if grep -q "GenuineIntel" /proc/cpuinfo; then
     processor=intel-ucode
 elif grep -q "AuthenticAMD" /proc/cpuinfo; then
@@ -220,17 +197,7 @@ select yn in Intel Amd Other; do
 done
 fi
 
-read -p "Enter the user you would like to create: " user
-echo
-pass_set $user
-echo
-echo -e "#!/usr/bin/bash\nuser_pass=$pass1" > "$dir"/pass.sh
-pass_set root
-echo
-echo -e "root_pass=$pass1" >> "$dir"/pass.sh
-
-read -p "Enter the hostname: " host
-echo
+select_disk
 echo "Select Filesystem Type: "
 select devicefs in "Btrfs(recommended)" "Ext4"; do
     case "$devicefs" in
@@ -245,13 +212,33 @@ select devicefs in "Btrfs(recommended)" "Ext4"; do
     esac
 done
 
-select_timezone
-select_disk
-get_swap_size
+select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
+	case instype in 
+		"Install from Scratch") get_swap_size
+			scratch="yes"
+			break
+			;;
+      "Install Only @(root) subvolume")
+	      		break
+	      		;;
+	esac
+done
 
-    while true; do
+user_set
+pass_set $user
+echo
+echo -e "#!/usr/bin/bash\nuser_pass=$pass1" > "$dir"/pass.sh
+pass_set root
+echo
+echo -e "root_pass=$pass1" >> "$dir"/pass.sh
+read -p "Enter the hostname: " host
+echo
+select_timezone
+
+if [ "$scratch" = "yes" ]; then
+while true; do
         echo
-        read -p "Are you sure you want to partition $DISK? This operation will modify the disk. (yes/no): " CONFIRM
+        read -p "Are you sure you want to continue? (yes/no): " CONFIRM
 
         if [[ "$CONFIRM" == "yes" ]]; then
             break
@@ -298,31 +285,21 @@ get_swap_size
     sleep 5
 
 mkfs.fat -F32 "$efi"
-mkfs.btrfs -f "$device"
+mkfs."$devicefs" -f "$device"
 mkswap -f "$swap"
-
+fi 
 mount "$device" /mnt
 fi
 
 source "$dir"/pass.sh
 export user
+export uid
 export root_pass
 export user_pass
 
-if [ "$devicefs" != "btrfs" ]; then
-        if [ ! -f "$dir"/ran.sh ]; then
-            cd /mnt
-            mkdir -p {boot/efi,etc}
-            mount "$efi" /mnt/boot/efi
-            swapon "$swap"
-            genfstab -U /mnt >> /mnt/etc/fstab
-	    echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
-        fi
-        btrfs_pkg=''
-        install
-fi
-
+if [ "$devicefs" = "btrfs" ]; then
 if [ ! -f "$dir"/ran.sh ]; then
+if [ "$scratch" = "yes" ];then
     cd /mnt
     btrfs subvolume create @
     btrfs subvolume create @var-log
@@ -333,7 +310,9 @@ if [ ! -f "$dir"/ran.sh ]; then
     btrfs subvolume create @home-dots
     btrfs subvolume create @home-down
     btrfs subvolume create @.snapshots
-    cd /
+    
+fi
+cd /
     umount /mnt
     mount -o subvol=@ "$device" /mnt
     cd /mnt
@@ -346,4 +325,83 @@ if [ ! -f "$dir"/ran.sh ]; then
     echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
 fi
 btrfs_pkg=grub-btrfs
-install
+fi
+
+if [ "$devicefs" = "ext4" ]; then
+        if [ ! -f "$dir"/ran.sh ]; then
+            cd /mnt
+            mkdir -p {boot/efi,etc}
+            mount "$efi" /mnt/boot/efi
+            swapon "$swap"
+            genfstab -U /mnt >> /mnt/etc/fstab
+	    echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\nuser=$user\ndevicefs=$devicefs\nhost=$host" > "$dir"/ran.sh
+        fi
+        btrfs_pkg=''
+fi
+
+    echo "$host" > /mnt/etc/hostname
+    cd /
+    sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
+    pacstrap -K /mnt base base-devel linux linux-firmware sof-firmware "$processor" "$btrfs_pkg" efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
+        echo "Installation failed, Run the script again"
+        exit 1
+    }
+
+    sed -i '/^#en_US.UTF-8/s/^#//' /mnt/etc/locale.gen
+    echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
+    arch-chroot /mnt bash -c '
+        grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
+	echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg" > /usr/bin/grubu
+	chmod +x /usr/bin/grubu
+	grubu
+        useradd -m -G wheel,video "$uid" "$user"
+	echo "root:"$root_pass"" | chpasswd
+	echo ""$user":"$user_pass"" | chpasswd
+        systemctl enable NetworkManager
+        systemctl enable systemd-resolved
+        if [ -d "/sys/class/power_supply" ]; then
+	    echo -e "SUBSYSTEM==\"pci\", ATTR{power/control}=\"auto\"" > /etc/udev/rules.d/pci_pm.rules
+	    echo -e "options snd_hda_intel power_save=1" > /etc/modprobe.d/audio_powersave.conf
+            systemctl enable thermald
+        else
+            pacman -Runs thermald
+        fi
+        rm /scripts
+        mkdir -p {/home/"$user"/.cache/,/home/"$user"/.config/,/home/"$user"/.dotfiles/,/home/"$user"/Download/}
+        chown "$user":"$user" /home/"$user"/.cache
+        chown "$user":"$user" /home/"$user"/.config
+        chown "$user":"$user" /home/"$user"/.dotfiles
+        chown "$user":"$user" /home/"$user"/Download
+
+        echo "Setting timezone to $TIMEZONE..."
+        ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
+
+        info_message "Timezone set to $TIMEZONE."
+
+        locale-gen
+    '
+    sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
+
+    if [ "$devicefs" = "btrfs" ]; then
+        mount -o subvol=@home-cache "$device" /mnt/home/"$user"/.cache
+        mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
+        mount -o subvol=@home-dots "$device" /mnt/home/"$user"/.dotfiles
+        mount -o subvol=@home-down "$device" /mnt/home/"$user"/Download
+        genfstab -U /mnt >> /mnt/etc/fstab
+        sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
+	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
+    fi
+    	arch-chroot /mnt bash -c '
+	mkinitcpio -P
+	'
+	echo -e "Installation successful. Unmount and Reboot Now?"
+	select ynr in Yes No; do
+		case $ynr in 
+			Yes)	umount -R /mnt
+				swapoff $swap
+				reboot
+				;;
+			No)	break
+				;;
+		esac
+	done
