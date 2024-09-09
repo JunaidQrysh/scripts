@@ -135,7 +135,7 @@ if [ "${#folders[@]}" -gt 1 ]; then
     select user in "${folders[@]}"; do
         if [[ -n "$user" ]]; then
             echo "Main folder selected: $user"
-	    uid="-u $(stat -c '%u' "/mnt/@home/home/"$user"")"
+	    uid="-u $(stat -c '%u' "/mnt/@home/"$user"")"
             break
         else
             echo "Invalid selection. Please try again."
@@ -145,7 +145,7 @@ if [ "${#folders[@]}" -gt 1 ]; then
 elif [ "${#folders[@]}" -eq 1 ]; then
     user="${folders[0]}"
     echo "Only one folder found. Setting '$user' as the main folder."
-    uid="-u $(stat -c '%u' "/mnt/@home/home/"$user"")"
+    uid="-u $(stat -c '%u' "/mnt/@home/"$user"")"
 else
     read -p "Enter the user you would like to create: " user
     echo
@@ -155,8 +155,11 @@ fi
 
 user_set() {
 	mount "$device" /mnt
-	if [ ! "$devicefs" = "btrfs" ]; then
-		if [ ! $scratch = "yes" ]; then
+	if [ "$devicefs" = "btrfs" ]; then
+		if [ "$scratch" = "yes" ]; then
+		read -p "Enter the user you would like to create: " user
+		uid=''
+		else
 		user_main
 		fi
 	else
@@ -339,7 +342,7 @@ if [ "$devicefs" = "ext4" ]; then
         fi
         btrfs_pkg=''
 fi
-echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\ndevicefs=$devicefs\nuser=$user\nuid=$uid\nTIMEZONE=$TIMEZONE\nhost=$host" > "$dir"/ran.sh
+echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\ndevicefs=$devicefs\nuser=$user\nuid='$uid'\nTIMEZONE=$TIMEZONE\nhost=$host" > "$dir"/ran.sh
 
     echo "$host" > /mnt/etc/hostname
     cd /
