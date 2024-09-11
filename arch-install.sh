@@ -227,7 +227,6 @@ select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
 	 		mount "$device" /mnt
     			cd /mnt
        			btrfs subvolume delete @/var/lib/*
-	  		btrfs subvolume delete @.snapshots/*
      			cd /
 			umount /mnt
 	      		break
