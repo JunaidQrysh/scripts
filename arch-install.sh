@@ -224,6 +224,12 @@ select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
 			;;
       "Install Only @(root) subvolume")
 	      		mount -o subvol=@var-pkg "$device" /var/cache/pacman/pkg
+	 		mount "$device" /mnt
+    			cd /mnt
+       			btrfs subvolume delete @/var/lib/*
+	  		btrfs subvolume delete @/.snapshots/*
+     			cd /
+			umount /mnt
 	      		break
 	      		;;
 	esac
