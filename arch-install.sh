@@ -223,10 +223,11 @@ select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
 			break
 			;;
       "Install Only @(root) subvolume")
-	      		mount -o subvol=@var-pkg "$device" /var/cache/pacman/pkg
 	 		mount "$device" /mnt
     			cd /mnt
        			btrfs subvolume delete @/var/lib/*
+	  		btrfs subvolume delete @
+     			btrfs subvolume create @
      			cd /
 			umount /mnt
 	      		break
@@ -353,7 +354,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     echo "$host" > /mnt/etc/hostname
     cd /
     sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
-    pacstrap -K -c /mnt base base-devel linux linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
+    pacstrap /mnt base base-devel linux linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git networkmanager thermald alsa-utils || {
         echo "Installation failed, Run the script again"
         exit 1
     }
