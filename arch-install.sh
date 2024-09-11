@@ -332,6 +332,7 @@ cd /
     mount -o subvol=@var-log "$device" /mnt/var/log
     mount -o subvol=@var-pkg "$device" /mnt/var/cache/pacman/pkg
     mount -o subvol=@home "$device" /mnt/home
+    mount -o subvol=@.snapshots "$device" /mnt/.snapshots
     mount "$efi" /mnt/boot/efi
     swapon "$swap"
 fi
