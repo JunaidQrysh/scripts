@@ -328,7 +328,8 @@ cd /
     umount /mnt
     mount -o subvol=@ "$device" /mnt
     cd /mnt
-    mkdir -p {boot/efi,home,.snapshots,var/cache/pacman/pkg,var/log,etc}
+    mkdir -p {boot/efi,home,.snapshots,var/cache/pacman/pkg,var/log,etc,mnt/defvol}
+    mount -o subvol=/ "$device" /mnt/mnt/defvol
     mount -o subvol=@var-log "$device" /mnt/var/log
     mount -o subvol=@var-pkg "$device" /mnt/var/cache/pacman/pkg
     mount -o subvol=@home "$device" /mnt/home
@@ -412,6 +413,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
 	'
         genfstab -U /mnt > /mnt/etc/fstab
         sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
+	sed -i 's/relatime/noatime/g' /mnt/etc/fstab
 	sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
     fi
     	arch-chroot /mnt bash -c '

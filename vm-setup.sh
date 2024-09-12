@@ -3,7 +3,31 @@
 echo "READ vm-config.txt AFTER reboot, Continue?"
 select yn in Ok No; do
     case $yn in
-        Ok)    break
+        Ok)    if [ ! -d ~/.vm ]; then
+	       mkdir -p ~/.vm
+	       fi
+	       device=$(findmnt -no SOURCE / | sed 's/\[.*\]//')
+	       if [ $(findmnt -n -o FSTYPE -T /) = btrfs ]; then
+		        cd /mnt/defvol
+			if ! sudo btrfs subvolume list /mnt/defvol | grep -q "@vm"; then
+			sudo btrfs subvolume create @vm
+			fi
+			if ! mountpoint -q ~/.vm; then
+			sudo mount -o subvol=@vm "$device" ~/.vm
+			sudo chown $(whoami):$(whoami) ~/.vm
+			chattr +C ~/.vm
+			fi
+			if ! grep -q "$HOME/.vm" /etc/fstab; then
+			UUID=$(grep "UUID=" /etc/fstab | grep "btrfs" | head -n 1 | awk '{print $1}' | cut -d'=' -f2)
+			MOUNT_OPTIONS=$(grep "UUID=" /etc/fstab | grep "btrfs" | head -n 1 | awk '{print $4}' | sed 's/,\?subvol=[^,]*//')
+			NEW_ENTRY="UUID=$UUID\t$HOME/.vm\tbtrfs\t$MOUNT_OPTIONS,subvol=@vm\t0 0"
+			echo -e "\n#$device " | sudo tee -a /etc/fstab
+			echo -e "$NEW_ENTRY" | sudo tee -a /etc/fstab
+			echo "New mount point added to fstab."
+			echo "Please check /etc/fstab to ensure everything is correct."
+			fi
+	       fi
+	       break
 		;;
         No)    exit
 		;;
