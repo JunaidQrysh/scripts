@@ -10,12 +10,17 @@ select yn in Ok No; do
     esac
 done
 
-sudo pacman -S go linux-headers dkms cmake qemu-base qemu-chardev-spice qemu-hw-usb-host qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft || exit
+sudo pacman -S --needed go linux-headers dkms cmake qemu-base qemu-chardev-spice qemu-hw-usb-host qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft || exit
 
+echo "Install looking glass?"
+select lg in Yes No; do
+case "$lg" in 
+Yes)if [ ! -d ~/Clone/looking-glass ]; then 
 curl https://looking-glass.io/artifact/bleeding/source -o looking-glass.tar.gz || exit
 mkdir -p ~/Clone/looking-glass
 tar -xf looking-glass.tar.gz --strip-component=1 -C ~/Clone/looking-glass
 rm looking-glass.tar.gz
+fi
 cd ~/Clone/looking-glass
 mkdir client/build
 cd client/build
@@ -27,12 +32,27 @@ sudo dkms install "."
 echo -e "options kvmfr static_size_mb=128" | sudo tee /etc/modprobe.d/kvmfr.conf
 echo -e "kvmfr" | sudo tee /etc/modules-load.d/kvmfr.conf
 echo -e "SUBSYSTEM==\"kvmfr\", OWNER=\"$(whoami)\", GROUP=\"kvm\", MODE=\"0660\"" | sudo tee /etc/udev/rules.d/99-kvmfr.rules
+break
+;;
+No)break
+   ;;
+esac
+done
 
-git clone https://github.com/HikariKnight/quickpassthrough.git ~/Clone/quickpassthrough || exit
-cd ~/Clone/quickpassthrough
+echo "Setup Gpu Passthrough?"
+select gp in Yes No; do
+case "$gp" in
+Yes)git clone https://github.com/HikariKnight/quickpassthrough.git ~/Clone/quickpassthrough
+cd ~/Clone/quickpassthrough || exit
 go mod download
 CGO_ENABLED=0 go build -ldflags="-X github.com/HikariKnight/quickpassthrough/internal/version.Version=$(git rev-parse --short HEAD)" -o quickpassthrough cmd/main.go
 ./quickpassthrough
+break
+;;
+No)break
+   ;;
+esac
+done
 
 if [ ! -d ~/.vm ]; then
 	       mkdir -p ~/.vm
@@ -59,7 +79,7 @@ if [ $(findmnt -n -o FSTYPE -T /) = btrfs ]; then
 	fi
 fi
 
-echo -e "unix_sock_group = \"libvirt\"\nunix_sock_rw_perms = \"0770\"" | sudo tee -a /etc/libvirt/libvirt.conf
+echo -e "unix_sock_group = \"libvirt\"\nunix_sock_rw_perms = \"0770\"" | sudo tee /etc/libvirt/libvirt.conf
 sudo mkdir -p /etc/libvirt/hooks/
 echo -e "#!/usr/bin/bash
 command=\$2
