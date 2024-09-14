@@ -12,8 +12,6 @@ done
 
 sudo pacman -S go linux-headers dkms cmake qemu-base qemu-chardev-spice qemu-hw-usb-host qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft || exit
 
-
-
 curl https://looking-glass.io/artifact/bleeding/source -o looking-glass.tar.gz || exit
 mkdir -p ~/Clone/looking-glass
 tar -xf looking-glass.tar.gz --strip-component=1 -C ~/Clone/looking-glass
@@ -78,13 +76,12 @@ fi" | sudo tee /etc/libvirt/hooks/qemu
 
 sudo usermod -a -G libvirt $(whoami)
 sudo systemctl enable libvirtd
-sudo virsh net-autostart default
 
 sudo pacman -Runs go cmake
 sudo rm -rf ~/go
 
 echo "Edit the file /etc/libvirt/qemu.conf and uncomment the cgroup_device_acl block, adding /dev/kvmfr0" 
-echo "Press any key to open /etc/libvirt/qemu.conf..."
+read -p "Press enter to open /etc/libvirt/qemu.conf..."
 sudoedit /etc/libvirt/qemu.conf
 echo "Reboot to complete installation"
 select yn in Reboot Wait; do
