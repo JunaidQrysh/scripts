@@ -8,7 +8,6 @@
   <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","size":134217728,"share":true}'/>
 </qemu:commandline>
 
-#Add this under <vcpu placement></vcpu>
 <iothreads>1</iothreads>
 <cputune>
 <vcpupin vcpu='0' cpuset='2'/>
