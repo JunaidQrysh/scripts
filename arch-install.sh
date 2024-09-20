@@ -225,7 +225,8 @@ select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
       "Install Only @(root) subvolume")
 	 		mount "$device" /mnt
     			cd /mnt
-       			btrfs subvolume delete @/var/lib/*
+       			btrfs subvolume delete @/var/lib/machines
+	                btrfs subvloume delete @/var/lib/portables
 	  		btrfs subvolume delete @
      			btrfs subvolume create @
      			cd /
