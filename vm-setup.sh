@@ -55,8 +55,8 @@ No)break
 esac
 done
 
-if [ ! -d ~/.vm ]; then
-	       mkdir -p ~/.vm
+if [ ! -d /var/lib/libvirt ]; then
+	       sudo mkdir -p /var/lib/libvirt
 fi
 device=$(findmnt -no SOURCE / | sed 's/\[.*\]//')
 if [ $(findmnt -n -o FSTYPE -T /) = btrfs ]; then
@@ -64,15 +64,14 @@ if [ $(findmnt -n -o FSTYPE -T /) = btrfs ]; then
 	if ! sudo btrfs subvolume list /mnt/defvol | grep -q "@vm"; then
 	sudo btrfs subvolume create @vm
 	fi
-	if ! mountpoint -q ~/.vm; then
-	sudo mount -o subvol=@vm "$device" ~/.vm
-	sudo chown $(whoami):$(whoami) ~/.vm
-			chattr +C ~/.vm
+	if ! mountpoint -q /var/lib/libvirt; then
+	sudo mount -o subvol=@vm "$device" /var/lib/libvirt
+			sudo chattr +C /var/lib/libvirt
 	fi
-	if ! grep -q "$HOME/.vm" /etc/fstab; then
+	if ! grep -q "/var/lib/libvirt" /etc/fstab; then
 	UUID=$(grep "UUID=" /etc/fstab | grep "btrfs" | head -n 1 | awk '{print $1}' | cut -d'=' -f2)
         MOUNT_OPTIONS=$(grep "UUID=" /etc/fstab | grep "btrfs" | head -n 1 | awk '{print $4}' | sed 's/,\?subvol=[^,]*//')
-	NEW_ENTRY="UUID=$UUID\t$HOME/.vm\tbtrfs\t$MOUNT_OPTIONS,subvol=@vm\t0 0"
+	NEW_ENTRY="UUID=$UUID\t/var/lib/libvirt\tbtrfs\t$MOUNT_OPTIONS,subvol=@vm\t0 0"
 	echo -e "\n#$device " | sudo tee -a /etc/fstab
 	echo -e "$NEW_ENTRY" | sudo tee -a /etc/fstab
 	echo "New mount point added to fstab."
