@@ -10,7 +10,7 @@ select yn in Ok No; do
     esac
 done
 
-sudo pacman -S --needed go linux-headers dkms cmake qemu-base qemu-chardev-spice qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft || exit
+sudo pacman -S --needed go linux-zen-headers dkms cmake qemu-base qemu-chardev-spice qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft || exit
 
 echo "Install looking glass?"
 select lg in Yes No; do
