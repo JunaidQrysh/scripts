@@ -1,6 +1,5 @@
 <domain xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0' type="kvm">
 
-#Before Vm setup
 <qemu:commandline>
   <qemu:arg value='-device'/>
   <qemu:arg value='{"driver":"ivshmem-plain","id":"shmem0","memdev":"looking-glass"}'/>
@@ -43,7 +42,9 @@
     <vmport state='off'/>
     <ioapic driver='kvm'/>
   </features>
-
+  <cpu mode="host-passthrough">
+    <topology sockets="1" cores="6" threads="2"/>
+  </cpu>
   <clock offset='localtime'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
@@ -72,3 +73,6 @@
   <qemu:arg value='-object'/>
   <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","size":33554432,"share":true}'/>
 </qemu:commandline>
+
+sudoedit /etc/modprobe.d/kvmfr.conf
+change size to 32
