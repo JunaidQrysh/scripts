@@ -81,7 +81,7 @@ if [ $(findmnt -n -o FSTYPE -T /) = btrfs ]; then
 	fi
 fi
 
-echo -e "unix_sock_group = \"libvirt\"\nunix_sock_rw_perms = \"0770\"" | sudo tee /etc/libvirt/libvirt.conf
+echo -e "unix_sock_group = \"libvirt\"\nunix_sock_rw_perms = \"0770\"" | sudo tee /etc/libvirt/libvirtd.conf
 sudo mkdir -p /etc/libvirt/hooks/
 echo -e "#!/usr/bin/bash
 command=\$2
