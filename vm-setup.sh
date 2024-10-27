@@ -32,7 +32,7 @@ sudo dkms install "."
 echo -e "options kvmfr static_size_mb=128" | sudo tee /etc/modprobe.d/kvmfr.conf
 echo -e "kvmfr" | sudo tee /etc/modules-load.d/kvmfr.conf
 echo -e "SUBSYSTEM==\"kvmfr\", OWNER=\"$(whoami)\", GROUP=\"kvm\", MODE=\"0660\"" | sudo tee /etc/udev/rules.d/99-kvmfr.rules
-echo -e "[Desktop Entry]\nName=Windows\nIcon=windows\nType=Application\nExec=/usr/bin/bash -c 'virsh start win11; looking-glass-client'" > ~/.local/share/applications/windows.desktop
+echo -e "[Desktop Entry]\nName=Windows\nIcon=windows\nType=Application\nExec=/usr/bin/bash -c 'virsh --connect qemu:///system start win11; looking-glass-client'" > ~/.local/share/applications/windows.desktop
 mkdir -p ~/.config/looking-glass
 echo -e "[win]\nfullScreen = yes\nnoScreensaver = yes\n[input]\ncaptureOnFocus = yes\n[spice]\ncaptureOnStart = yes" > ~/.config/looking-glass/client.ini
 break
