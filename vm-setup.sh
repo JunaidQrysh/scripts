@@ -51,6 +51,22 @@ cd ~/Clone/quickpassthrough || exit
 go mod download
 CGO_ENABLED=0 go build -ldflags="-X github.com/HikariKnight/quickpassthrough/internal/version.Version=$(git rev-parse --short HEAD)" -o quickpassthrough cmd/main.go
 ./quickpassthrough
+cat << 'EOF' > gpu-pass
+#!/usr/bin/bash
+
+if [ $(lspci -nnk | grep -A 3 -i 'vga.*nvidia' | grep 'Kernel driver in use:' | awk '{print $5}') = "nvidia" ]; then
+    read -p "Nvidia driver detected. Switch to Vfio? [y/n]: " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+    sudo cp -R $HOME/Clone/quickpassthrough/config/etc /
+else
+    read -p "Vfio detected. Switch to Nvidia? [y/n]: " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+    sudo cp -R $HOME/Clone/quickpassthrough/backup/etc /
+fi
+
+sudo mkinitcpio -P
+grubu
+EOF
+chmod +x gpu-pass
+sudo mv gpu-pass /usr/bin/
 break
 ;;
 No)break
