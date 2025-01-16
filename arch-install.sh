@@ -366,7 +366,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     arch-chroot /mnt bash -c '
         sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
         grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
-	echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg" > /usr/bin/grubu
+        echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg\nsudo sed -i '\''/^[[:space:]]*echo[[:space:]]*'\'''\''Loading/d'\'' /boot/grub/grub.cfg" > /usr/bin/grubu
 	chmod +x /usr/bin/grubu
 	grubu
         useradd -m -G wheel,video $uid "$user"
