@@ -356,7 +356,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     echo "$host" > /mnt/etc/hostname
     cd /
     sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
-    pacstrap /mnt base base-devel linux-zen linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git less networkmanager thermald alsa-utils || {
+    pacstrap /mnt base base-devel linux-zen linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git less networkmanager alsa-utils || {
         echo "Installation failed, Run the script again"
         exit 1
     }
@@ -377,9 +377,6 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
         if [ -d "/sys/class/power_supply" ]; then
 	    echo -e "SUBSYSTEM==\"pci\", ATTR{power/control}=\"auto\"" > /etc/udev/rules.d/pci_pm.rules
 	    echo -e "options snd_hda_intel power_save=1" > /etc/modprobe.d/audio_powersave.conf
-            systemctl enable thermald
-        else
-            pacman -Runs thermald
         fi
 	
 
