@@ -75,4 +75,22 @@
 </qemu:commandline>
 
 sudoedit /etc/modprobe.d/kvmfr.conf
-change size to 32
+#change size to 32
+
+#change ip base(192.168.1.) according to your network & wlp46s0 with your wifi adapter
+virsh net-edit default
+
+<network>
+  <name>default</name>
+  <uuid>f1bf2945-2047-47ae-9291-b2fa159abd9e</uuid>
+  <forward dev='wlp46s0' mode='route'>
+    <interface dev='wlp46s0'/>
+  </forward>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:c9:08:c0'/>
+  <ip address='192.168.1.129' netmask='255.255.255.240'>
+    <dhcp>
+      <range start='192.168.1.136' end='192.168.1.136'/>
+    </dhcp>
+  </ip>
+</network>

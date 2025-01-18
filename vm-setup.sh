@@ -12,7 +12,7 @@ select yn in Ok No; do
     esac
 done
 
-sudo pacman -S --needed go linux-zen-headers dkms cmake qemu-base qemu-chardev-spice qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft || exit
+sudo pacman -S --needed go linux-zen-headers dkms cmake qemu-base qemu-chardev-spice qemu-audio-spice qemu-hw-display-qxl virt-manager dnsmasq iptables-nft net-tools || exit
 
 echo "Install looking glass?"
 select lg in Yes No; do
@@ -24,6 +24,7 @@ select lg in Yes No; do
             tar -xf looking-glass.tar.gz --strip-component=1 -C ~/Clone/looking-glass
             rm looking-glass.tar.gz
         fi
+        sudo cp update_virbr /usr/bin
         cd ~/Clone/looking-glass
         mkdir client/build
         cd client/build
@@ -36,7 +37,7 @@ select lg in Yes No; do
         echo -e "options kvmfr static_size_mb=128" | sudo tee /etc/modprobe.d/kvmfr.conf
         echo -e "kvmfr" | sudo tee /etc/modules-load.d/kvmfr.conf
         echo -e "SUBSYSTEM==\"kvmfr\", OWNER=\"$(whoami)\", GROUP=\"kvm\", MODE=\"0660\"" | sudo tee /etc/udev/rules.d/99-kvmfr.rules
-        echo -e "[Desktop Entry]\nName=Windows\nIcon=windows\nType=Application\nExec=/usr/bin/bash -c 'virsh start win11; looking-glass-client'" >~/.local/share/applications/windows.desktop
+        echo -e "[Desktop Entry]\nName=Windows\nIcon=windows\nType=Application\nExec=/usr/bin/bash -c 'update_virbr; virsh start win11; looking-glass-client'" >~/.local/share/applications/windows.desktop
         echo -e "uri_default = \"qemu:///system\"" >~/.config/libvirt/libvirt.conf
         mkdir -p ~/.config/looking-glass
         echo -e "[win]\nfullScreen = yes\nnoScreensaver = yes\n[input]\ncaptureOnFocus = yes\n[spice]\ncaptureOnStart = yes" >~/.config/looking-glass/client.ini
@@ -121,7 +122,12 @@ elif [ \"\$command\" = \"release\" ]; then
     systemctl set-property --runtime -- system.slice AllowedCPUs=0-15
     systemctl set-property --runtime -- user.slice AllowedCPUs=0-15
     systemctl set-property --runtime -- init.scope AllowedCPUs=0-15
-fi" | sudo tee /etc/libvirt/hooks/qemu
+fi
+
+arp -i wlp46s0 -Ds 192.168.199.136 wlp46s0 pub
+" | sudo tee /etc/libvirt/hooks/qemu
+
+sudo chmod +x /etc/libvirt/hooks/qemu
 
 sudo usermod -a -G libvirt $(whoami)
 sudo systemctl enable libvirtd
