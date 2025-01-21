@@ -124,10 +124,11 @@ elif [ \"\$command\" = \"release\" ]; then
     systemctl set-property --runtime -- init.scope AllowedCPUs=0-15
 fi
 
-arp -i wlp46s0 -Ds 192.168.199.136 wlp46s0 pub
+arp -i wlp46s0 -Ds 192.168.1.136 wlp46s0 pub
 " | sudo tee /etc/libvirt/hooks/qemu
 
 sudo chmod +x /etc/libvirt/hooks/qemu
+sudo chown $USER:root /etc/libvirt/hooks/qemu
 
 sudo usermod -a -G libvirt $(whoami)
 sudo systemctl enable libvirtd

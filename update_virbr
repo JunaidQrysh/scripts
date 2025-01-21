@@ -16,7 +16,7 @@ update_xml() {
 
     # Remove trailing dot from network_base
     network_base="${network_base%.}"
-    
+
     local current_ip=$(echo "$xml_content" | grep -oP "address='[^']+'" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
     local range_start=$(echo "$xml_content" | grep -oP "start='[^']+'" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
     local range_end=$(echo "$xml_content" | grep -oP "end='[^']+'" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
@@ -27,17 +27,19 @@ update_xml() {
     fi
 
     local ip_last_octet=$(echo "$current_ip" | cut -d'.' -f4)
-    local range_start_last_octet=$(echo "$range_start" | cut -d'.' -f4)
-    local range_end_last_octet=$(echo "$range_end" | cut -d'.' -f4)
+    local range_last_octet=$(echo "$range_start" | cut -d'.' -f4)
 
     local new_ip="${network_base}.${ip_last_octet}"
-    local new_range_start="${network_base}.${range_start_last_octet}"
-    local new_range_end="${network_base}.${range_end_last_octet}"
+    local new_range="${network_base}.${range_last_octet}"
+
+    sed "s|-Ds [0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+|-Ds $new_range|" /etc/libvirt/hooks/qemu >~/qemu.new &&
+        cat ~/qemu.new >/etc/libvirt/hooks/qemu &&
+        rm ~/qemu.new
 
     echo "$xml_content" | sed -E \
         -e "s|address='[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'|address='$new_ip'|" \
-        -e "s|start='[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'|start='$new_range_start'|" \
-        -e "s|end='[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'|end='$new_range_end'|"
+        -e "s|start='[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'|start='$new_range'|" \
+        -e "s|end='[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'|end='$new_range'|"
 }
 
 cleanup() {
@@ -53,13 +55,11 @@ network_base=$(get_network_base)
 temp_xml=$(mktemp)
 new_xml=$(mktemp)
 
-virsh net-dumpxml "$network_name" > "$temp_xml" || {
-    exit 1
-}
+virsh net-dumpxml "$network_name" >"$temp_xml" || exit 1
 
 updated_content=$(update_xml "$(cat "$temp_xml")" "$network_base") || exit 1
-echo "$updated_content" > "$new_xml"
+echo "$updated_content" >"$new_xml"
 
-virsh net-destroy "$network_name" > /dev/null 2>&1
+virsh net-destroy "$network_name" >/dev/null 2>&1
 virsh net-define "$new_xml" || exit 1
 virsh net-start "$network_name" || exit 1
