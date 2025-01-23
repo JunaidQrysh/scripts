@@ -64,12 +64,12 @@ select gp in Yes No; do
         cat <<'EOF' >gpu-pass
 #!/usr/bin/bash
 
-if [ $(lspci -nnk | grep -A 3 -i 'vga.*nvidia' | grep 'Kernel driver in use:' | awk '{print $5}') = "nvidia" ]; then
-    read -p "Nvidia driver detected. Switch to Vfio? [y/n]: " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
-    sudo cp -R $HOME/Clone/quickpassthrough/config/etc /
-else
+if [ $(lspci -nnk | grep -A 3 -i 'vga.*nvidia' | grep 'Kernel driver in use:' | awk '{print $5}') = "vfio-pci" ]; then
     read -p "Vfio detected. Switch to Nvidia? [y/n]: " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
     sudo cp -R $HOME/Clone/quickpassthrough/backup/etc /
+else
+    read -p "Nvidia driver detected. Switch to Vfio? [y/n]: " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+    sudo cp -R $HOME/Clone/quickpassthrough/config/etc /
 fi
 
 sudo mkinitcpio -P
