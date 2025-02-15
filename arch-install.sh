@@ -356,7 +356,7 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     echo "$host" > /mnt/etc/hostname
     cd /
     sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
-    pacstrap /mnt base base-devel linux-zen linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git less networkmanager alsa-utils || {
+    pacstrap /mnt base base-devel linux linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git less networkmanager alsa-utils || {
         echo "Installation failed, Run the script again"
         exit 1
     }
