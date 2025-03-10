@@ -364,27 +364,26 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     sed -i '/^#en_US.UTF-8/s/^#//' /mnt/etc/locale.gen
     echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
     arch-chroot /mnt bash -c '
-        sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
+        sed -i "/^#ParallelDownloads/s/^#//" /etc/pacman.conf
         grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
-        echo -e "#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg\nsudo sed -i '\''/^[[:space:]]*echo[[:space:]]*'\'''\''Loading/d'\'' /boot/grub/grub.cfg" > /usr/bin/grubu
-	chmod +x /usr/bin/grubu
-	grubu
+        echo -e '\''#!/usr/bin/bash\nsudo grub-mkconfig -o /boot/grub/grub.cfg\nsudo sed -i '\''\'\'''\''/^[[:space:]]*echo[[:space:]]*'\''\'\'''\''Loading/d'\''\'\'''\'' /boot/grub/grub.cfg'\'' > /usr/bin/grubu
+        chmod +x /usr/bin/grubu
+        grubu
         useradd -m -G wheel,video $uid "$user"
-	echo "root:"$root_pass"" | chpasswd
-	echo ""$user":"$user_pass"" | chpasswd
+        echo "root:$root_pass" | chpasswd
+        echo "$user:$user_pass" | chpasswd
         systemctl enable NetworkManager
         systemctl enable systemd-resolved
         if [ -d "/sys/class/power_supply" ]; then
-	    echo -e "SUBSYSTEM==\"pci\", ATTR{power/control}=\"auto\"" > /etc/udev/rules.d/pci_pm.rules
-	    echo -e "options snd_hda_intel power_save=1" > /etc/modprobe.d/audio_powersave.conf
+            echo -e "SUBSYSTEM==\"pci\", ATTR{power/control}=\"auto\"" > /etc/udev/rules.d/pci_pm.rules
+            echo -e "options snd_hda_intel power_save=1" > /etc/modprobe.d/audio_powersave.conf
         fi
-	
-
+    
         echo "Setting timezone to $TIMEZONE..."
         ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-
+    
         info_message "Timezone set to $TIMEZONE."
-
+    
         locale-gen
     '
     sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
