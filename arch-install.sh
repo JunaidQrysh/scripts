@@ -317,9 +317,6 @@ if [ "$scratch" = "yes" ];then
     btrfs subvolume create @var-log
     btrfs subvolume create @var-pkg
     btrfs subvolume create @home
-    btrfs subvolume create @home-cache
-    btrfs subvolume create @home-config
-    btrfs subvolume create @home-local
     btrfs subvolume create @home-clone
     btrfs subvolume create @home-down
     btrfs subvolume create @.snapshots
@@ -387,21 +384,10 @@ echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$
     sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
 
     if [ "$devicefs" = "btrfs" ]; then
-	mkdir -p {/mnt/home/$user/.cache,/mnt/home/$user/.config,/mnt/home/$user/.local,/mnt/home/$user/Clone,/mnt/home/$user/Downloads}
-        mount -o subvol=@home-cache "$device" /mnt/home/"$user"/.cache
-        mount -o subvol=@home-config "$device" /mnt/home/"$user"/.config
-	mount -o subvol=@home-local "$device" /mnt/home/"$user"/.local
+	mkdir -p {/mnt/home/$user/Clone,/mnt/home/$user/Downloads}
         mount -o subvol=@home-clone "$device" /mnt/home/"$user"/Clone
         mount -o subvol=@home-down "$device" /mnt/home/"$user"/Downloads
 	arch-chroot /mnt bash -c '
-	chattr +C /home/"$user"/.cache
-	chattr +C /home/"$user"/.config
-	chattr +C /home/"$user"/.local
-	chattr +C /home/"$user"/Clone
-	chattr +C /home/"$user"/Downloads
-        chown "$user":"$user" /home/"$user"/.cache
-        chown "$user":"$user" /home/"$user"/.config
-	chown "$user":"$user" /home/"$user"/.local
 	chown "$user":"$user" /home/"$user"/Clone
         chown "$user":"$user" /home/"$user"/Downloads
 	'
