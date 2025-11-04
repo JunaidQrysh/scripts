@@ -92,10 +92,16 @@ select_disk() {
                 efi="${DISK}p1"
                 swap="${DISK}p2"
                 device="${DISK}p3"
+                if [ $devicefs = "ext4" ]; then
+                    home="${DISK}p4"
+                fi
             else
                 efi="${DISK}1"
                 swap="${DISK}2"
                 device="${DISK}3"
+                if [ $devicefs = "ext4" ]; then
+                    home="${DISK}4"
+                fi
             fi
 
             swapoff "$swap" >/dev/null 2>&1
@@ -121,21 +127,35 @@ get_swap_size() {
     done
 }
 
+get_root_size() {
+    while true; do
+        echo
+        read -p "Enter the size of the root partition (e.g., 10G for 10 GB): " ROOT_SIZE
+
+        if [[ "$ROOT_SIZE" =~ ^[0-9]+[MGK]?$ ]]; then
+            info_message "Root size: $ROOT_SIZE"
+            break
+        else
+            error_message "Error: Invalid size format. Please enter a size like '10G' or '512M'."
+        fi
+    done
+}
+
 user_main() {
     folders=()
-    for folder in /mnt/@home/*; do
+    for folder in /mnt/*; do
         if [ -d "$folder" ]; then
             folders+=("$(basename "$folder")")
         fi
     done
 
     if [ "${#folders[@]}" -gt 1 ]; then
-        echo "Multiple folders found in /mnt/@home/home/. Please select the main folder:"
+        echo "Multiple folders found in home directory. Please select the main folder:"
 
         select user in "${folders[@]}"; do
             if [[ -n "$user" ]]; then
                 echo "Main folder selected: $user"
-                uid="-u $(stat -c '%u' "/mnt/@home/"$user"")"
+                uid="-u $(stat -c '%u' "/mnt/$user")"
                 break
             else
                 echo "Invalid selection. Please try again."
@@ -145,7 +165,7 @@ user_main() {
     elif [ "${#folders[@]}" -eq 1 ]; then
         user="${folders[0]}"
         echo "Only one folder found. Setting '$user' as the main folder."
-        uid="-u $(stat -c '%u' "/mnt/@home/"$user"")"
+        uid="-u $(stat -c '%u' "/mnt/$user")"
     else
         read -p "Enter the user you would like to create: " user
         echo
@@ -154,18 +174,23 @@ user_main() {
 }
 
 user_set() {
-    mount "$device" /mnt
-    if [ "$devicefs" = "btrfs" ]; then
+    if [ $devicefs = "btrfs" ]; then
         if [ "$scratch" = "yes" ]; then
             read -p "Enter the user you would like to create: " user
             uid=''
         else
+            mount -o subvol=@home "$device" /mnt
             user_main
         fi
     else
-        read -p "Enter the user you would like to create: " user
-        echo
-        uid=''
+        if [ "$scratch" = "yes" ]; then
+            read -p "Enter the user you would like to create: " user
+            echo
+            uid=''
+        else
+            mount "$home" /mnt
+            user_main
+        fi
     fi
     umount /mnt
 }
@@ -202,10 +227,9 @@ else
         done
     fi
 
-    select_disk
     echo "Select Filesystem Type: "
     select devicefs in "Btrfs(recommended)" "Ext4"; do
-        case "$devicefs" in
+        case $devicefs in
         "Btrfs(recommended)")
             devicefs="btrfs"
             break
@@ -217,22 +241,41 @@ else
         esac
     done
 
-    select instype in "Install from Scratch" "Install Only @(root) subvolume"; do
+    select_disk
+
+    select instype in "Install from Scratch" "Install Only root partition(if you previously installed using this script)"; do
         case "$instype" in
         "Install from Scratch")
             get_swap_size
+            if [ $devicefs = "ext4" ]; then
+                get_root_size
+            fi
             scratch="yes"
             break
             ;;
-        "Install Only @(root) subvolume")
-            mount "$device" /mnt
-            cd /mnt
-            btrfs subvolume delete @/var/lib/machines
-            btrfs subvolume delete @/var/lib/portables
-            btrfs subvolume delete @
-            btrfs subvolume create @
-            cd /
-            umount /mnt
+        "Install Only root partition(if you previously installed using this script)")
+            info_message "*Warning* All data on root partition/subvolume will be deleted."
+            read -p "Are you sure you want to continue? type 'yes' or 'no': " CONFIRM
+            if [[ "$CONFIRM" == "yes" ]]; then
+                break
+            elif [[ "$CONFIRM" == "no" ]]; then
+                info_message "Operation cancelled."
+                exit 0
+            else
+                error_message "Please type 'yes' or 'no'."
+            fi
+            if [ $devicefs = "btrfs" ]; then
+                mount "$device" /mnt
+                cd /mnt
+                btrfs subvolume delete @/var/lib/machines
+                btrfs subvolume delete @/var/lib/portables
+                btrfs subvolume delete @
+                btrfs subvolume create @
+                cd /
+                umount /mnt
+            else
+                mkfs.$devicefs "$device"
+            fi
             break
             ;;
         esac
@@ -252,7 +295,14 @@ else
     if [ "$scratch" = "yes" ]; then
         while true; do
             echo
-            read -p "Are you sure you want to continue? (yes/no): " CONFIRM
+
+            if [ $devicefs = "ext4" ]; then
+                info_message "*Warning* All data on $efi, $swap, $device, and $home will be deleted."
+            else
+                info_message "*Warning* All data on $efi, $swap, and $device will be deleted."
+            fi
+
+            read -p "Are you sure you want to continue? type 'yes' or 'no': " CONFIRM
 
             if [[ "$CONFIRM" == "yes" ]]; then
                 break
@@ -260,14 +310,9 @@ else
                 info_message "Operation cancelled."
                 exit 0
             else
-                error_message "Please enter 'yes' or 'no'."
+                error_message "Please type 'yes' or 'no'."
             fi
         done
-
-        DISK_SIZE_SECTORS=$(gdisk -l "$DISK" | grep "Disk size" | awk '{print $4}')
-        EFI_SIZE_SECTORS=$((100 * 1024 * 2)) # 100 MB in sectors (assuming 512 bytes per sector)
-
-        SWAP_SIZE_SECTORS=$(echo "$SWAP_SIZE" | awk '/G/ {print $1 * 2048000} /M/ {print $1 * 409600} /K/ {print $1 * 409.6} /[0-9]/ {print $1 * 2048000}')
 
         {
             echo "o"
@@ -287,8 +332,20 @@ else
             echo "n"
             echo "3"
             echo ""
-            echo ""
+            if [ $devicefs = "ext4" ]; then
+                echo "+${ROOT_SIZE}"
+            else
+                echo ""
+            fi
             echo "8300"
+
+            if [ $devicefs = "ext4" ]; then
+                echo "n"
+                echo "4"
+                echo ""
+                echo ""
+                echo "8302"
+            fi
 
             echo "w"
             echo "y"
@@ -299,7 +356,12 @@ else
         sleep 5
 
         mkfs.fat -F32 "$efi"
-        mkfs."$devicefs" -f "$device"
+        if [ $devicefs = "ext4" ]; then
+            mkfs."$devicefs" "$device"
+            mkfs."$devicefs" "$home"
+        else
+            mkfs."$devicefs" -f "$device"
+        fi
         mkswap -f "$swap"
     fi
     mount "$device" /mnt
@@ -343,18 +405,20 @@ fi
 if [ "$devicefs" = "ext4" ]; then
     if [ ! -f "$dir"/ran.sh ]; then
         cd /mnt
-        mkdir -p {boot/efi,etc}
+        mkdir -p {boot/efi,home,etc}
         mount "$efi" /mnt/boot/efi
+        mount "$home" /mnt/home
         swapon "$swap"
         genfstab -U /mnt >/mnt/etc/fstab
     fi
     btrfs_pkg=''
 fi
-echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nefi=$efi\nswap=$swap\ndevicefs=$devicefs\nuser=$user\nuid='$uid'\nTIMEZONE=$TIMEZONE\nhost=$host" >"$dir"/ran.sh
+echo -e "#!/usr/bin/bash\nprocessor=$processor\ndevice=$device\nswap=$swap\ndevicefs=$devicefs\nuser=$user\nuid='$uid'\nTIMEZONE=$TIMEZONE\nhost=$host" >"$dir"/ran.sh
 
 echo "$host" >/mnt/etc/hostname
 cd /
 sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
+
 pacstrap /mnt base base-devel linux linux-firmware sof-firmware $processor $btrfs_pkg efibootmgr sudo neovim git less networkmanager alsa-utils || {
     echo "Installation failed, Run the script again"
     exit 1
@@ -379,28 +443,26 @@ arch-chroot /mnt bash -c '
         echo "Setting timezone to $TIMEZONE..."
         ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
     
-        info_message "Timezone set to $TIMEZONE."
+        echo "Timezone set to $TIMEZONE."
     
         locale-gen
-    '
+'
+
 sed -i '/^## Uncomment to allow members of group wheel to execute any command/ {n; s/^# //}' /mnt/etc/sudoers
 
 if [ "$devicefs" = "btrfs" ]; then
     mkdir -p {/mnt/home/$user/Clone,/mnt/home/$user/Downloads}
     mount -o subvol=@home-clone "$device" /mnt/home/"$user"/Clone
     mount -o subvol=@home-down "$device" /mnt/home/"$user"/Downloads
-    arch-chroot /mnt bash -c '
-	chown "$user":"$user" /home/"$user"/Clone
-        chown "$user":"$user" /home/"$user"/Downloads
-	'
+    uid_num="$(stat -c '%u' /mnt/home/"$user")"
+    chown "$uid_num":"$uid_num" /home/"$user"/Clone
+    chown "$uid_num":"$uid_num" /home/"$user"/Downloads
     genfstab -U /mnt >/mnt/etc/fstab
     sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
     sed -i 's/relatime/noatime/g' /mnt/etc/fstab
     sed -i '/^HOOKS=/ s/(\(.*\))/(\1 grub-btrfs-overlayfs)/' /mnt/etc/mkinitcpio.conf
 fi
-arch-chroot /mnt bash -c '
-	mkinitcpio -P
-	'
+
 echo -e "Installation successful. Unmount and Reboot Now?"
 select ynr in Yes No; do
     case $ynr in
