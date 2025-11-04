@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 if [ ! -d "~/Clone" ]; then
-	mkdir -p ~/Clone
+    mkdir -p ~/Clone
 fi
 
 cd ~/Clone
