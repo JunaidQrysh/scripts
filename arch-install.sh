@@ -428,7 +428,8 @@ sed -i '/^#en_US.UTF-8/s/^#//' /mnt/etc/locale.gen
 echo "LANG=en_US.UTF-8" >/mnt/etc/locale.conf
 arch-chroot /mnt bash -c '
         sed -i "/^#ParallelDownloads/s/^#//" /etc/pacman.conf
-        grub-install --removable --efi-directory=/boot/efi --bootloader-id=Arch
+        grub-install --efi-directory=/boot/efi --bootloader-id=Arch
+        grub-install --efi-directory=/boot/efi --bootloader-id=Arch --removable
         grub-mkconfig -o /boot/grub/grub.cfg
         useradd -m -G wheel,video $uid "$user"
         echo "root:$root_pass" | chpasswd
@@ -455,8 +456,8 @@ if [ "$devicefs" = "btrfs" ]; then
     mount -o subvol=@home-clone "$device" /mnt/home/"$user"/Clone
     mount -o subvol=@home-down "$device" /mnt/home/"$user"/Downloads
     uid_num="$(stat -c '%u' /mnt/home/"$user")"
-    chown "$uid_num":"$uid_num" /home/"$user"/Clone
-    chown "$uid_num":"$uid_num" /home/"$user"/Downloads
+    chown "$uid_num":"$uid_num" /mnt/home/"$user"/Clone
+    chown "$uid_num":"$uid_num" /mnt/home/"$user"/Downloads
     genfstab -U /mnt >/mnt/etc/fstab
     sed -i 's/,subvolid=[0-9]*\s*//g' /mnt/etc/fstab
     sed -i 's/relatime/noatime/g' /mnt/etc/fstab
